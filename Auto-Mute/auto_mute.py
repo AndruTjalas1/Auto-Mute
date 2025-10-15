@@ -49,15 +49,18 @@ last_notification_time = None
 
 def toggle_auto_mute():
     """Toggle auto-mute system on/off via hotkey."""
-    global auto_mute_enabled
+    global auto_mute_enabled, last_mute_state
     auto_mute_enabled = not auto_mute_enabled
     
     if auto_mute_enabled:
-        send_notification("✅ Auto Mute Enabled", "Schedule will be enforced")
-        print("✅ Auto Mute: ENABLED")
+        send_notification("✅ Auto Mute Enabled", "Schedule will be enforced again")
+        print("✅ Auto Mute: ENABLED - Schedule will be enforced")
+        # Reset state so it can check and enforce immediately
+        last_mute_state = None
     else:
-        send_notification("⏸️ Auto Mute Paused", "Schedule temporarily disabled")
-        print("⏸️ Auto Mute: PAUSED")
+        send_notification("⏸️ Auto Mute PAUSED", "You have manual control of audio\nPress Ctrl+Shift+M to resume")
+        print("⏸️ Auto Mute: PAUSED - Manual control active")
+        print("   Press Ctrl+Shift+M again to resume schedule enforcement")
 
 def check_mute_time():
     global last_mute_state, last_notification_time
@@ -113,12 +116,22 @@ def check_mute_time():
     last_mute_state = should_be_muted
 
 # Register hotkey: Ctrl+Shift+M to toggle auto-mute
-keyboard.add_hotkey('ctrl+shift+m', toggle_auto_mute)
+try:
+    keyboard.add_hotkey('ctrl+shift+m', toggle_auto_mute)
+    hotkey_registered = True
+    print("⌨️  Hotkey registered: Ctrl+Shift+M = Toggle Auto Mute ON/OFF")
+except Exception as e:
+    hotkey_registered = False
+    print(f"⚠️  Warning: Could not register hotkey (may need admin rights): {e}")
+    print("   Script will still work, but hotkey won't be available")
 
 schedule.every(1).minutes.do(check_mute_time)
 
 print("🔇 Auto Mute running... (Press Ctrl+C to exit)")
-print("⌨️  Hotkey: Ctrl+Shift+M = Toggle Auto Mute ON/OFF")
+if hotkey_registered:
+    print("✅ Status: ENABLED - Schedule is being enforced")
+else:
+    print("   To use hotkey, run as administrator")
 check_mute_time()
 while True:
     schedule.run_pending()
