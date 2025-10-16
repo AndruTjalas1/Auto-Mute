@@ -10,8 +10,11 @@ Write-Host ""
 $startupFolder = [System.IO.Path]::Combine([Environment]::GetFolderPath('Startup'))
 Write-Host "Startup folder: $startupFolder" -ForegroundColor Yellow
 
+# Get the script directory
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+
 # Path to the VBS script
-$vbsScriptPath = "C:\Personal\run_auto_mute.vbs"
+$vbsScriptPath = Join-Path $scriptDir "run_auto_mute.vbs"
 $shortcutPath = [System.IO.Path]::Combine($startupFolder, "Auto Mute.lnk")
 
 # Check if VBS file exists
@@ -27,7 +30,7 @@ try {
     $WshShell = New-Object -ComObject WScript.Shell
     $Shortcut = $WshShell.CreateShortcut($shortcutPath)
     $Shortcut.TargetPath = $vbsScriptPath
-    $Shortcut.WorkingDirectory = "C:\Personal"
+    $Shortcut.WorkingDirectory = $scriptDir
     $Shortcut.Description = "Auto Mute - Automatically mutes system audio on schedule"
     $Shortcut.Save()
     
