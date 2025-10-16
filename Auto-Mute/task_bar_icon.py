@@ -232,6 +232,31 @@ class TaskBarIcon:
             f"Status: {status}\nTime: {current_time}"
         )
     
+    def _open_schedule_gui(self, icon, item):
+        """
+        Open the schedule configuration GUI (menu action).
+        
+        Args:
+            icon: pystray.Icon instance
+            item: MenuItem that was clicked
+        """
+        import subprocess
+        import sys
+        import os
+        
+        # Get the path to config_gui.py
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        gui_script = os.path.join(script_dir, "config_gui.py")
+        
+        # Launch the GUI in a new process
+        try:
+            subprocess.Popen([sys.executable, gui_script])
+        except Exception as e:
+            self.core.send_notification(
+                "Error",
+                f"Failed to open schedule GUI: {e}"
+            )
+    
     def _exit_action(self, icon, item):
         """
         Exit the application (menu action).
@@ -258,6 +283,7 @@ class TaskBarIcon:
                 default=True
             ),
             item('Show Status', self._show_status),
+            item('Open Schedule GUI', self._open_schedule_gui),
             item('Exit', self._exit_action)
         )
     
