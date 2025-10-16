@@ -4,19 +4,19 @@
     "end": "18:00"
   },
   "Tuesday": {
-    "start": "08:45",
-    "end": "15:00"
+    "start": "09:00",
+    "end": "13:00"
   },
   "Wednesday": {
-    "start": "08:45",
+    "start": "09:00",
     "end": "13:00"
   },
   "Thursday": {
-    "start": "08:45",
-    "end": "15:00"
+    "start": "09:00",
+    "end": "13:00"
   },
   "Friday": {
-    "start": "08:45",
+    "start": "09:00",
     "end": "13:00"
   }
 }
