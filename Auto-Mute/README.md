@@ -17,6 +17,7 @@
 - 🎨 **GUI Configuration Tool** for easy schedule setup
 - 🚀 **Auto-start on Windows login**
 - 🔁 **Re-mutes automatically** if you manually unmute during scheduled hours
+- 🎯 **System Tray Icon** with visual status indicator (green=enabled, red=paused)
 
 ## 🖼️ Screenshots
 
@@ -70,12 +71,17 @@ python config_gui.py
 
 ### 4. Run the Script
 
-**For testing (with console output):**
+**Console mode (with output):**
 ```powershell
 python auto_mute.py
 ```
 
-**To run in background (silent mode):**
+**With system tray icon (recommended):**
+```powershell
+python auto_mute.py --tray
+```
+
+**Silent background mode:**
 ```powershell
 # Double-click run_auto_mute.vbs
 # OR run:
@@ -102,6 +108,20 @@ powershell -ExecutionPolicy Bypass -File setup_autostart.ps1
 - Works system-wide, even when other apps are focused
 
 Perfect for when you need to deviate from your schedule temporarily!
+
+## 🎯 System Tray Icon
+
+When running with `--tray` flag, a visual indicator appears in your taskbar:
+
+- 🟢 **Green Icon**: Auto-mute is ENABLED (schedule is active)
+- 🔴 **Red Icon**: Auto-mute is PAUSED (schedule is disabled)
+
+**Right-click the icon for options:**
+- Toggle Auto-Mute (enable/pause)
+- Show Status (current state and time)
+- Exit (close the application)
+
+The icon updates automatically when you use the hotkey or when the schedule changes the mute state.
 
 ## 📜 Available Scripts
 
@@ -140,8 +160,17 @@ Perfect for when you need to deviate from your schedule temporarily!
 - `plyer` - Cross-platform notifications
 - `schedule` - Job scheduling
 - `keyboard` - Global hotkey support
+- `pystray` - System tray icon (optional, for `--tray` mode)
+- `Pillow` - Image processing for tray icon (optional, for `--tray` mode)
 
 All dependencies are listed in `requirements.txt`.
+
+**To install tray icon dependencies:**
+```powershell
+pip install pystray Pillow
+# Or use the installer script:
+.\install_tray_dependencies.ps1
+```
 
 ## 🔧 Troubleshooting
 

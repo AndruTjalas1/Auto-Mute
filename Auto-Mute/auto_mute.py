@@ -1,138 +1,112 @@
-import datetime
+#!/usr/bin/env python3
+"""
+Auto Mute - Main Entry Point
+
+Main script that runs the auto-mute functionality.
+Use --tray flag to enable system tray icon.
+
+Usage:
+    python auto_mute.py          # Console mode
+    python auto_mute.py --tray   # With system tray icon
+"""
+
+import sys
 import time
-import json
-import os
-import schedule
-import ctypes
+import threading
 import keyboard
-from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
-from comtypes import CLSCTX_ALL
-from plyer import notification
+import auto_mute_core
+import comtypes
 
-CONFIG_FILE = "config.json"
-auto_mute_enabled = True  # Global flag to enable/disable auto-mute
-
-def get_volume_mute_state():
-    """Get current mute state of system volume."""
-    devices = AudioUtilities.GetSpeakers()
-    interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
-    volume = ctypes.cast(interface, ctypes.POINTER(IAudioEndpointVolume))
-    return volume.GetMute()
-
-def set_volume_mute(mute: bool):
-    """Mute or unmute system volume."""
-    devices = AudioUtilities.GetSpeakers()
-    interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
-    volume = ctypes.cast(interface, ctypes.POINTER(IAudioEndpointVolume))
-    volume.SetMute(mute, None)
-
-def send_notification(title, message):
-    """Send desktop notification."""
-    notification.notify(
-        title=title,
-        message=message,
-        timeout=5  # seconds
-    )
-
-def load_schedule():
-    if not os.path.exists(CONFIG_FILE):
-        raise FileNotFoundError(f"Config file '{CONFIG_FILE}' not found.")
-    with open(CONFIG_FILE, "r") as f:
-        return json.load(f)
-
-def parse_time(timestr):
-    hour, minute = map(int, timestr.split(":"))
-    return hour * 60 + minute
-
-last_mute_state = None
-last_notification_time = None
 
 def toggle_auto_mute():
-    """Toggle auto-mute system on/off via hotkey."""
-    global auto_mute_enabled, last_mute_state
-    auto_mute_enabled = not auto_mute_enabled
+    """Toggle auto-mute on/off via hotkey."""
+    auto_mute_core.auto_mute_enabled = not auto_mute_core.auto_mute_enabled
+    status = "ENABLED" if auto_mute_core.auto_mute_enabled else "DISABLED"
+    auto_mute_core.send_notification(
+        "Auto-Mute Toggle",
+        f"Auto-mute is now {status}"
+    )
+    print(f"\nAuto-mute {status}")
+
+
+def setup_hotkey():
+    """Setup the global hotkey (Ctrl+Shift+M) to toggle auto-mute."""
+    try:
+        keyboard.add_hotkey('ctrl+shift+m', toggle_auto_mute)
+        print("Hotkey registered: Ctrl+Shift+M")
+        return True
+    except Exception as e:
+        print(f"Warning: Could not register hotkey: {e}")
+        print("Note: Hotkeys require administrator privileges")
+        return False
+
+
+def run_console_mode():
+    """Run in console mode without system tray."""
+    print("Starting Auto-Mute in console mode...")
+    print("Auto-mute is ENABLED")
     
-    if auto_mute_enabled:
-        send_notification("✅ Auto Mute Enabled", "Schedule will be enforced again")
-        print("✅ Auto Mute: ENABLED - Schedule will be enforced")
-        # Reset state so it can check and enforce immediately
-        last_mute_state = None
+    # Initialize COM for this thread (required for audio utilities)
+    comtypes.CoInitialize()
+    
+    setup_hotkey()
+    auto_mute_core.send_notification(
+        "Auto-Mute Started",
+        "Running in console mode. Press Ctrl+Shift+M to toggle."
+    )
+    
+    # Schedule the check to run every minute
+    auto_mute_core.schedule.every(1).minutes.do(auto_mute_core.check_mute_time)
+    
+    # Run initial check
+    auto_mute_core.check_mute_time()
+    
+    print("\nPress Ctrl+C to exit...")
+    try:
+        while True:
+            auto_mute_core.schedule.run_pending()
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("\n\nShutting down Auto-Mute...")
+        auto_mute_core.send_notification("Auto-Mute", "Auto-mute stopped")
+    finally:
+        # Cleanup COM when exiting
+        comtypes.CoUninitialize()
+
+
+def run_tray_mode():
+    """Run with system tray icon."""
+    try:
+        import task_bar_icon
+    except ImportError:
+        print("Error: task_bar_icon module not found or dependencies missing.")
+        print("Please install: pip install pystray Pillow")
+        sys.exit(1)
+    
+    print("Starting Auto-Mute with system tray icon...")
+    
+    # Initialize COM for main thread (required for audio utilities)
+    comtypes.CoInitialize()
+    
+    # Setup hotkey
+    setup_hotkey()
+    
+    # Setup and run tray icon (pass the core module)
+    # Note: task_bar_icon.setup_tray_icon blocks until the icon is closed
+    try:
+        task_bar_icon.setup_tray_icon(auto_mute_core)
+    finally:
+        # Cleanup COM when exiting
+        comtypes.CoUninitialize()
+
+
+def main():
+    """Main entry point."""
+    if "--tray" in sys.argv:
+        run_tray_mode()
     else:
-        send_notification("⏸️ Auto Mute PAUSED", "You have manual control of audio\nPress Ctrl+Shift+M to resume")
-        print("⏸️ Auto Mute: PAUSED - Manual control active")
-        print("   Press Ctrl+Shift+M again to resume schedule enforcement")
+        run_console_mode()
 
-def check_mute_time():
-    global last_mute_state, last_notification_time
-    
-    # Skip if auto-mute is disabled
-    if not auto_mute_enabled:
-        return
-    
-    now = datetime.datetime.now()
-    weekday = now.strftime("%A")
 
-    schedule_data = load_schedule()
-    if weekday not in schedule_data:
-        set_volume_mute(False)
-        return
-
-    start_str = schedule_data[weekday]["start"]
-    end_str = schedule_data[weekday]["end"]
-
-    start_minutes = parse_time(start_str)
-    end_minutes = parse_time(end_str)
-    current_minutes = now.hour * 60 + now.minute
-
-    # Handle overnight ranges
-    if start_minutes < end_minutes:
-        should_be_muted = start_minutes <= current_minutes < end_minutes
-    else:
-        should_be_muted = current_minutes >= start_minutes or current_minutes < end_minutes
-
-    # Get actual current mute state
-    actual_mute_state = get_volume_mute_state()
-
-    # Enforce mute state if it doesn't match what it should be
-    if actual_mute_state != should_be_muted:
-        set_volume_mute(should_be_muted)
-        
-        # Only send notification if:
-        # 1. This is the first run (last_mute_state is None), OR
-        # 2. The scheduled state changed (last_mute_state != should_be_muted), OR
-        # 3. User manually changed it (show notification every time we re-enforce)
-        time_since_last_notification = None
-        if last_notification_time:
-            time_since_last_notification = (now - last_notification_time).total_seconds()
-        
-        # Send notification on state changes or if user manually toggled (enforce silently if within 30 sec)
-        if last_mute_state != should_be_muted or time_since_last_notification is None or time_since_last_notification > 30:
-            if should_be_muted:
-                send_notification("🔇 Auto Mute", f"Muted system volume ({weekday})")
-            else:
-                send_notification("🔊 Auto Mute", f"Unmuted system volume ({weekday})")
-            last_notification_time = now
-    
-    last_mute_state = should_be_muted
-
-# Register hotkey: Ctrl+Shift+M to toggle auto-mute
-try:
-    keyboard.add_hotkey('ctrl+shift+m', toggle_auto_mute)
-    hotkey_registered = True
-    print("⌨️  Hotkey registered: Ctrl+Shift+M = Toggle Auto Mute ON/OFF")
-except Exception as e:
-    hotkey_registered = False
-    print(f"⚠️  Warning: Could not register hotkey (may need admin rights): {e}")
-    print("   Script will still work, but hotkey won't be available")
-
-schedule.every(1).minutes.do(check_mute_time)
-
-print("🔇 Auto Mute running... (Press Ctrl+C to exit)")
-if hotkey_registered:
-    print("✅ Status: ENABLED - Schedule is being enforced")
-else:
-    print("   To use hotkey, run as administrator")
-check_mute_time()
-while True:
-    schedule.run_pending()
-    time.sleep(30)
+if __name__ == "__main__":
+    main()
