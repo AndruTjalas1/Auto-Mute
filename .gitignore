@@ -42,8 +42,6 @@ Thumbs.db
 desktop.ini
 
 # Project specific
+config.json
 config.json.backup
 *.log
-
-# Keep example config
-!config.json
