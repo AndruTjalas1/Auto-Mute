@@ -190,9 +190,14 @@ class TaskBarIcon:
     
     def _check_mute_time_wrapper(self):
         """Wrapper for check_mute_time that updates icon after check."""
-        self.core.check_mute_time()
-        # Update icon in case state changed
-        self._update_icon()
+        try:
+            self.core.check_mute_time()
+            # Update icon in case state changed
+            self._update_icon()
+        except Exception as e:
+            print(f"[ERROR] check_mute_time_wrapper failed: {e}")
+            import traceback
+            traceback.print_exc()
     
     def _run_scheduler(self):
         """Run the schedule checker in a background thread."""
@@ -209,8 +214,18 @@ class TaskBarIcon:
             
             # Keep running scheduled tasks
             while self._running:
-                self.core.schedule.run_pending()
-                time.sleep(1)
+                try:
+                    self.core.schedule.run_pending()
+                    time.sleep(1)
+                except Exception as e:
+                    print(f"[ERROR] Scheduler error: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    time.sleep(5)  # Wait before retrying
+        except Exception as e:
+            print(f"[ERROR] Scheduler thread crashed: {e}")
+            import traceback
+            traceback.print_exc()
         finally:
             # Cleanup COM when thread exits
             comtypes.CoUninitialize()
@@ -298,33 +313,38 @@ class TaskBarIcon:
         Start the task bar icon and begin monitoring.
         This method blocks until the icon is stopped.
         """
-        # Start the scheduler in a background thread
-        self._running = True
-        self._scheduler_thread = threading.Thread(
-            target=self._run_scheduler,
-            daemon=True
-        )
-        self._scheduler_thread.start()
-        
-        # Create and run the system tray icon (blocks until stopped)
-        self.icon = pystray.Icon(
-            name="Auto-Mute",
-            icon=self._create_icon_image(self.core.auto_mute_enabled),
-            title=self._get_tooltip(),
-            menu=self._create_menu()
-        )
-        
-        # Send startup notification
-        self.core.send_notification(
-            "Auto-Mute Started",
-            "Running with system tray icon. Press Ctrl+Shift+M to toggle."
-        )
-        
-        # Run the icon (blocks until icon.stop() is called)
-        self.icon.run()
-        
-        # Cleanup when icon stops
-        self._stop()
+        try:
+            # Start the scheduler in a background thread
+            self._running = True
+            self._scheduler_thread = threading.Thread(
+                target=self._run_scheduler,
+                daemon=True
+            )
+            self._scheduler_thread.start()
+            
+            # Create and run the system tray icon (blocks until stopped)
+            self.icon = pystray.Icon(
+                name="Auto-Mute",
+                icon=self._create_icon_image(self.core.auto_mute_enabled),
+                title=self._get_tooltip(),
+                menu=self._create_menu()
+            )
+            
+            # Send startup notification
+            self.core.send_notification(
+                "Auto-Mute Started",
+                "Running with system tray icon. Press Ctrl+Shift+M to toggle."
+            )
+            
+            # Run the icon (blocks until icon.stop() is called)
+            self.icon.run()
+        except Exception as e:
+            print(f"[ERROR] Tray icon error: {e}")
+            import traceback
+            traceback.print_exc()
+        finally:
+            # Cleanup when icon stops
+            self._stop()
 
 
 def setup_tray_icon(core_module):
