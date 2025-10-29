@@ -13,6 +13,10 @@ import schedule
 from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
 from comtypes import CLSCTX_ALL
 from plyer import notification
+import warnings
+
+# Suppress resource warnings
+warnings.filterwarnings("ignore", category=ResourceWarning)
 
 # Get the directory where this script is located
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -22,6 +26,7 @@ CONFIG_FILE = os.path.join(SCRIPT_DIR, "config.json")
 auto_mute_enabled = True
 last_mute_state = None
 last_notification_time = None
+notifications_enabled = True  # Can be disabled in tray mode to avoid COM conflicts
 
 def get_volume_mute_state():
     """Get current mute state of system volume."""
@@ -29,7 +34,16 @@ def get_volume_mute_state():
         devices = AudioUtilities.GetSpeakers()
         interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
         volume = ctypes.cast(interface, ctypes.POINTER(IAudioEndpointVolume))
-        return volume.GetMute()
+        mute_state = volume.GetMute()
+        
+        # Explicitly release the COM pointer to prevent cleanup errors
+        if interface:
+            try:
+                interface.Release()
+            except:
+                pass
+        
+        return mute_state
     except Exception as e:
         print(f"[ERROR] Failed to get mute state: {e}")
         return None
@@ -41,11 +55,21 @@ def set_volume_mute(mute: bool):
         interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
         volume = ctypes.cast(interface, ctypes.POINTER(IAudioEndpointVolume))
         volume.SetMute(mute, None)
+        
+        # Explicitly release the COM pointer to prevent cleanup errors
+        if interface:
+            try:
+                interface.Release()
+            except:
+                pass
     except Exception as e:
         print(f"[ERROR] Failed to set mute state: {e}")
 
 def send_notification(title, message):
     """Send desktop notification."""
+    if not notifications_enabled:
+        return
+    
     try:
         notification.notify(
             title=title,

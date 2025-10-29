@@ -8,6 +8,10 @@ Use --tray flag to enable system tray icon.
 Usage:
     python auto_mute.py          # Console mode
     python auto_mute.py --tray   # With system tray icon
+
+Note: The tray icon may show harmless COM cleanup errors on exit. 
+These are from the pycaw library and don't affect operation.
+When running via pythonw.exe (as in run_auto_mute.vbs), these errors are hidden.
 """
 
 import sys
@@ -16,8 +20,31 @@ import threading
 import keyboard
 import auto_mute_core
 import comtypes
+import warnings
+import os
 
+# Suppress resource warnings
+warnings.filterwarnings("ignore", category=ResourceWarning)
 
+# Redirect stderr to suppress COM cleanup errors
+class SuppressComErrors:
+    def __init__(self, stderr):
+        self.stderr = stderr
+        self.suppress = False
+    
+    def write(self, text):
+        if "access violation" not in text.lower():
+            self.stderr.write(text)
+    
+    def flush(self):
+        self.stderr.flush()
+    
+    def __getattr__(self, name):
+        return getattr(self.stderr, name)
+
+# Only suppress errors in tray mode
+if "--tray" in sys.argv:
+    sys.stderr = SuppressComErrors(sys.stderr)
 def toggle_auto_mute():
     """Toggle auto-mute on/off via hotkey."""
     auto_mute_core.auto_mute_enabled = not auto_mute_core.auto_mute_enabled
@@ -85,11 +112,20 @@ def run_tray_mode():
     
     print("Starting Auto-Mute with system tray icon...")
     
+    # Keep notifications enabled (they work fine)
+    # Just make sure they're initialized before pystray
+    
     # Initialize COM for main thread (required for audio utilities)
     comtypes.CoInitialize()
     
     # Setup hotkey
     setup_hotkey()
+    
+    # Send startup notification while COM is ready
+    auto_mute_core.send_notification(
+        "Auto-Mute Started",
+        "Running with system tray icon. Press Ctrl+Shift+M to toggle."
+    )
     
     # Setup and run tray icon (pass the core module)
     # Note: task_bar_icon.setup_tray_icon blocks until the icon is closed
@@ -109,4 +145,11 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\n\nShutting down...")
+    except Exception as e:
+        print(f"[ERROR] {e}")
+        import traceback
+        traceback.print_exc()

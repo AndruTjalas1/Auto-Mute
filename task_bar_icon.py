@@ -323,17 +323,12 @@ class TaskBarIcon:
             self._scheduler_thread.start()
             
             # Create and run the system tray icon (blocks until stopped)
+            icon_image = self._create_icon_image(self.core.auto_mute_enabled)
             self.icon = pystray.Icon(
                 name="Auto-Mute",
-                icon=self._create_icon_image(self.core.auto_mute_enabled),
+                icon=icon_image,
                 title=self._get_tooltip(),
                 menu=self._create_menu()
-            )
-            
-            # Send startup notification
-            self.core.send_notification(
-                "Auto-Mute Started",
-                "Running with system tray icon. Press Ctrl+Shift+M to toggle."
             )
             
             # Run the icon (blocks until icon.stop() is called)
