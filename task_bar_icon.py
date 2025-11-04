@@ -206,6 +206,9 @@ class TaskBarIcon:
         comtypes.CoInitialize()
         
         try:
+            # Clear any existing scheduled jobs first
+            self.core.schedule.clear()
+            
             # Schedule the check to run every minute
             self.core.schedule.every(1).minutes.do(self._check_mute_time_wrapper)
             
@@ -227,6 +230,8 @@ class TaskBarIcon:
             import traceback
             traceback.print_exc()
         finally:
+            # Cleanup scheduler
+            self.core.schedule.clear()
             # Cleanup COM when thread exits
             comtypes.CoUninitialize()
     

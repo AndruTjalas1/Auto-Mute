@@ -82,6 +82,9 @@ def run_console_mode():
         "Running in console mode. Press Ctrl+Shift+M to toggle."
     )
     
+    # Clear any existing scheduled jobs
+    auto_mute_core.schedule.clear()
+    
     # Schedule the check to run every minute
     auto_mute_core.schedule.every(1).minutes.do(auto_mute_core.check_mute_time)
     
@@ -97,6 +100,8 @@ def run_console_mode():
         print("\n\nShutting down Auto-Mute...")
         auto_mute_core.send_notification("Auto-Mute", "Auto-mute stopped")
     finally:
+        # Cleanup scheduler
+        auto_mute_core.schedule.clear()
         # Cleanup COM when exiting
         comtypes.CoUninitialize()
 
@@ -130,8 +135,12 @@ def run_tray_mode():
     # Setup and run tray icon (pass the core module)
     # Note: task_bar_icon.setup_tray_icon blocks until the icon is closed
     try:
+        # Clear any existing scheduled jobs before starting
+        auto_mute_core.schedule.clear()
         task_bar_icon.setup_tray_icon(auto_mute_core)
     finally:
+        # Cleanup scheduler
+        auto_mute_core.schedule.clear()
         # Cleanup COM when exiting
         comtypes.CoUninitialize()
 
