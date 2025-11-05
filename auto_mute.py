@@ -62,6 +62,10 @@ def setup_hotkey():
         keyboard.add_hotkey('ctrl+shift+m', toggle_auto_mute)
         print("Hotkey registered: Ctrl+Shift+M")
         return True
+    except PermissionError:
+        print("Warning: Could not register hotkey - requires administrator privileges")
+        print("Note: Auto-mute will still work, but hotkey will be disabled")
+        return False
     except Exception as e:
         print(f"Warning: Could not register hotkey: {e}")
         print("Note: Hotkeys require administrator privileges")
@@ -116,21 +120,31 @@ def run_tray_mode():
         sys.exit(1)
     
     print("Starting Auto-Mute with system tray icon...")
+    print("(May take a moment to initialize system tray...)")
     
     # Keep notifications enabled (they work fine)
     # Just make sure they're initialized before pystray
     
     # Initialize COM for main thread (required for audio utilities)
-    comtypes.CoInitialize()
+    try:
+        comtypes.CoInitialize()
+    except Exception as e:
+        print(f"Warning: COM initialization had issues: {e}")
     
-    # Setup hotkey
-    setup_hotkey()
+    # Setup hotkey (non-fatal if fails)
+    try:
+        setup_hotkey()
+    except Exception as e:
+        print(f"Warning: Hotkey setup failed: {e}")
     
     # Send startup notification while COM is ready
-    auto_mute_core.send_notification(
-        "Auto-Mute Started",
-        "Running with system tray icon. Press Ctrl+Shift+M to toggle."
-    )
+    try:
+        auto_mute_core.send_notification(
+            "Auto-Mute Started",
+            "Running with system tray icon. Press Ctrl+Shift+M to toggle."
+        )
+    except Exception as e:
+        print(f"Warning: Notification failed: {e}")
     
     # Setup and run tray icon (pass the core module)
     # Note: task_bar_icon.setup_tray_icon blocks until the icon is closed
@@ -138,11 +152,23 @@ def run_tray_mode():
         # Clear any existing scheduled jobs before starting
         auto_mute_core.schedule.clear()
         task_bar_icon.setup_tray_icon(auto_mute_core)
+    except Exception as e:
+        print(f"[ERROR] Tray mode crashed: {e}")
+        import traceback
+        traceback.print_exc()
+        # Allow graceful fallback
+        raise
     finally:
         # Cleanup scheduler
-        auto_mute_core.schedule.clear()
+        try:
+            auto_mute_core.schedule.clear()
+        except:
+            pass
         # Cleanup COM when exiting
-        comtypes.CoUninitialize()
+        try:
+            comtypes.CoUninitialize()
+        except:
+            pass
 
 
 def main():

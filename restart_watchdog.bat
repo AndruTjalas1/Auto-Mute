@@ -1,9 +1,9 @@
 @echo off
+setlocal enabledelayedexpansion
+
 REM Auto-Mute Watchdog with Sleep/Wake Handling
 REM This script monitors auto_mute and restarts it if the system wakes from sleep
 REM or if the process crashes
-
-setlocal enabledelayedexpansion
 
 set "SCRIPT_PATH=C:\Auto-Mute"
 set "PYTHON_EXE_PATH=%SCRIPT_PATH%\.venv\Scripts\pythonw.exe"
@@ -40,16 +40,17 @@ if "!IS_RUNNING!"=="0" (
     )
     
     REM Start the script directly without virtual environment issues
-    start "" /B "%PYTHON_TO_USE%" "%SCRIPT_PATH%\auto_mute.py" --tray >nul 2>&1
+    REM Using /B to start without creating a new window
+    start "" /B "%PYTHON_TO_USE%" "%SCRIPT_PATH%\auto_mute.py" --tray
     
     if !ERRORLEVEL! neq 0 (
-        echo [%date% %time%] Failed to start Auto-Mute. Using fallback python... >> "%LOG_FILE%" 2>nul
-        start "" /B python "%SCRIPT_PATH%\auto_mute.py" --tray >nul 2>&1
+        echo [%date% %time%] First attempt failed ^(error !ERRORLEVEL!^), trying fallback python... >> "%LOG_FILE%" 2>nul
+        start "" /B python "%SCRIPT_PATH%\auto_mute.py" --tray
     )
     
     echo [%date% %time%] Restarted Auto-Mute >> "%LOG_FILE%" 2>nul
     
-    REM Wait a bit before checking again
-    timeout /t 10 /nobreak >nul
+    REM Wait before checking again (increased from 10 to 15 seconds for stability)
+    timeout /t 15 /nobreak >nul
     goto loop
 )
