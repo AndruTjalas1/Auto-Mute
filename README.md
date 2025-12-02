@@ -71,33 +71,82 @@ python config_gui.py
 
 ### 4. Run the Script
 
-**Console mode (with output):**
+**Test Run (Console mode with output):**
 ```powershell
 python auto_mute.py
 ```
 
-**With system tray icon (recommended):**
+**Background Mode with System Tray Icon (Recommended for testing):**
 ```powershell
 python auto_mute.py --tray
 ```
 
-**Silent background mode:**
+**Silent Background Mode (One-time run):**
 ```powershell
 # Double-click run_auto_mute.vbs
 # OR run:
 wscript run_auto_mute.vbs
 ```
 
-## ⚙️ Setup Auto-Start on Windows Login
-
-To have Auto Mute start automatically when you log in:
-
+### 5. Enable Persistent Auto-Start (Recommended)
+For Auto-Mute to run automatically at Windows startup with watchdog protection:
 ```powershell
-# Run the setup script:
+# Run with administrator privileges:
 powershell -ExecutionPolicy Bypass -File setup_autostart.ps1
-
-# Or manually: Press Win+R, type "shell:startup", and create a shortcut to run_auto_mute.vbs
 ```
+
+See the **Setup Auto-Start on Windows Login (Persistent Watchdog)** section below for detailed configuration.
+
+## ⚙️ Setup Auto-Start on Windows Login (Persistent Watchdog)
+
+Auto Mute uses a **watchdog mechanism** to keep the application running forever, even if it crashes or the system wakes from sleep. To set this up:
+
+### Step 1: Create Virtual Environment
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
+
+### Step 2: Verify Python Path (Important!)
+The watchdog script expects Python to be in the virtual environment at:
+```
+C:\Auto-Mute\.venv\Scripts\pythonw.exe
+```
+
+If you installed Python in a different location or your virtual environment is elsewhere, update these files:
+- `restart_watchdog.bat` - Line 9: `set "PYTHON_EXE_PATH=..."`
+- `setup_autostart.ps1` - Update the path to match your setup
+
+### Step 3: Enable Auto-Start
+```powershell
+# Run the setup script with admin privileges:
+powershell -ExecutionPolicy Bypass -File setup_autostart.ps1
+```
+
+This will:
+- Create a scheduled task that runs `run_watchdog.vbs` at Windows startup
+- The watchdog automatically launches the Auto-Mute process
+- The watchdog monitors the process and restarts it if it crashes or the system wakes from sleep
+- Logs activity to `watchdog.log` for debugging
+
+### Step 4: Test the Setup
+```powershell
+# Verify the scheduled task was created:
+Get-ScheduledTask -TaskName "Auto-Mute Watchdog" -ErrorAction SilentlyContinue
+
+# Or manually start the watchdog:
+wscript run_watchdog.vbs
+```
+
+### How the Watchdog Works
+The watchdog system ensures Auto-Mute runs continuously:
+1. **Scheduled Task** triggers `run_watchdog.vbs` at Windows startup
+2. `run_watchdog.vbs` executes `restart_watchdog.bat`
+3. `restart_watchdog.bat` starts the Python process and monitors it
+4. If the process crashes, the watchdog restarts it automatically
+5. If Windows wakes from sleep, the watchdog detects this and restarts the process
+6. Activity is logged to `watchdog.log` for troubleshooting
 
 ## ⌨️ Hotkey Controls
 
@@ -128,23 +177,36 @@ The icon updates automatically when you use the hotkey or when the schedule chan
 | Script | Description |
 |--------|-------------|
 | `auto_mute.py` | Main auto-mute script |
+| `auto_mute_core.py` | Core logic for muting/unmuting and schedule management |
 | `config_gui.py` | GUI for configuring schedule |
-| `run_auto_mute.vbs` | Run script silently in background |
+| `task_bar_icon.py` | System tray icon implementation |
+| `run_auto_mute.vbs` | Run script silently in background (one-time) |
+| `run_watchdog.vbs` | Launch watchdog for persistent background execution |
+| `restart_watchdog.bat` | Watchdog monitoring script - restarts Auto-Mute if it crashes |
 | `configure_schedule.vbs` | Open configuration GUI |
-| `setup_autostart.ps1` | Add to Windows startup |
-| `remove_autostart.ps1` | Remove from Windows startup |
+| `setup_autostart.ps1` | Add watchdog to Windows startup (recommended) |
+| `remove_autostart.ps1` | Remove watchdog from Windows startup |
 | `stop_auto_mute.ps1` | Stop running background process |
 | `check_status.ps1` | Check if script is running |
-| `create_desktop_shortcut.ps1` | Create desktop shortcut for GUI |
+| `watchdog.log` | Log file for watchdog activity and debugging |
 
 ## 🛠️ How It Works
 
+### Main Application Flow
 1. Script checks current time every minute
 2. Compares against configured schedule for the current day
 3. If current time is within mute range → mutes system
 4. When time exits mute range → unmutes system
 5. Notifications appear when mute state changes
 6. If you manually unmute during mute hours, script re-mutes within 1 minute
+7. Hotkey (`Ctrl+Shift+M`) allows manual toggling of auto-mute on/off
+
+### Watchdog/Persistence Layer (When Auto-Started)
+- **Scheduled Task** runs `run_watchdog.vbs` at Windows startup
+- **Watchdog Batch Script** (`restart_watchdog.bat`) continuously monitors the Python process
+- **Automatic Restart**: If the Auto-Mute process crashes or is killed, watchdog restarts it within 30 seconds
+- **Sleep/Wake Handling**: Detects when system wakes from sleep and restarts the process to ensure continued functionality
+- **Logging**: All watchdog activity is logged to `watchdog.log` for troubleshooting
 
 ## 🎯 Use Cases
 
@@ -174,6 +236,17 @@ pip install pystray Pillow
 
 ## 🔧 Troubleshooting
 
+**Script not starting with watchdog?**
+- Verify virtual environment path is correct: `C:\Auto-Mute\.venv\Scripts\pythonw.exe`
+- Check `watchdog.log` for error messages
+- Ensure scheduled task was created: `Get-ScheduledTask -TaskName "Auto-Mute Watchdog"`
+- Run `setup_autostart.ps1` again with administrator privileges
+
+**Watchdog not restarting the process?**
+- Check `watchdog.log` for error messages: `tail -f watchdog.log` (or open in notepad)
+- Verify the process isn't blocked by Windows Defender or antivirus
+- Ensure `restart_watchdog.bat` has correct Python path (line 9)
+
 **Notifications not appearing?**
 - Enable Windows notifications for Python
 - Check Windows notification settings
@@ -181,16 +254,21 @@ pip install pystray Pillow
 **Script not muting?**
 - Verify time format is "HH:MM" (24-hour format)
 - Check day names match exactly (e.g., "Monday", not "monday")
-- Run in terminal mode to see error messages
+- Run in console mode to see error messages: `python auto_mute.py`
 
 **Can't stop background process?**
 - Run `stop_auto_mute.ps1`
 - Or use Task Manager to kill `pythonw.exe` process
+- To remove from autostart: `powershell -ExecutionPolicy Bypass -File remove_autostart.ps1`
 
 **Hotkey not working?**
-- Ensure script is running
+- Ensure script is running: `powershell -ExecutionPolicy Bypass -File check_status.ps1`
 - Check no other application is using `Ctrl+Shift+M`
 - May require running as administrator
+
+**Python not found errors?**
+- Verify Python is installed and in PATH: `python --version`
+- Or use full path to Python: `C:\Auto-Mute\.venv\Scripts\python.exe auto_mute.py`
 
 ## 🤝 Contributing
 
