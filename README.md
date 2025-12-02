@@ -1,38 +1,38 @@
 # Auto Mute
 
-🔇 A Python script that automatically mutes/unmutes your Windows system audio based on a customizable schedule.
+A Python script that automatically mutes/unmutes your Windows system audio based on a customizable schedule.
 
 ![Python](https://img.shields.io/badge/python-3.8+-blue.svg)
 ![Platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
-## ✨ Features
+## Features
 
-- 🔇 **Automatic muting** based on time schedules
-- 📅 **Different schedules** for each day of the week
-- 🌙 **Overnight ranges** supported (e.g., 22:00 to 07:00)
-- 🔔 **Desktop notifications** when mute state changes
-- 🔄 **Runs silently** in the background
-- ⌨️ **Global Hotkey**: `Ctrl+Shift+M` to toggle auto-mute ON/OFF
-- 🎨 **GUI Configuration Tool** for easy schedule setup
-- 🚀 **Auto-start on Windows login**
-- 🔁 **Re-mutes automatically** if you manually unmute during scheduled hours
-- 🎯 **System Tray Icon** with visual status indicator (green=enabled, red=paused)
+- **Automatic muting** based on time schedules
+- **Different schedules** for each day of the week
+- **Overnight ranges** supported (e.g., 22:00 to 07:00)
+- **Desktop notifications** when mute state changes
+- **Runs silently** in the background
+- **Global Hotkey**: `Ctrl+Shift+M` to toggle auto-mute ON/OFF
+- **GUI Configuration Tool** for easy schedule setup
+- **Auto-start on Windows login**
+- **Re-mutes automatically** if you manually unmute during scheduled hours
+- **System Tray Icon** with visual status indicator (green=enabled, red=paused)
 
-## 🖼️ Screenshots
+## Screenshots
 
 ### GUI Configuration Tool
 Easy-to-use interface for configuring your mute schedule:
 
 ![Config GUI](screenshots/config_gui.png)
 
-## 📋 Requirements
+## Requirements
 
 - Windows OS
 - Python 3.8 or higher
 - Administrator privileges (for audio control)
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Clone the Repository
 ```bash
@@ -97,7 +97,7 @@ powershell -ExecutionPolicy Bypass -File setup_autostart.ps1
 
 See the **Setup Auto-Start on Windows Login (Persistent Watchdog)** section below for detailed configuration.
 
-## ⚙️ Setup Auto-Start on Windows Login (Persistent Watchdog)
+## Setup Auto-Start on Windows Login (Persistent Watchdog)
 
 Auto Mute uses a **watchdog mechanism** to keep the application running forever, even if it crashes or the system wakes from sleep. To set this up:
 
@@ -148,22 +148,22 @@ The watchdog system ensures Auto-Mute runs continuously:
 5. If Windows wakes from sleep, the watchdog detects this and restarts the process
 6. Activity is logged to `watchdog.log` for troubleshooting
 
-## ⌨️ Hotkey Controls
+## Hotkey Controls
 
 **`Ctrl+Shift+M`** - Toggle Auto Mute ON/OFF
 
-- ✅ **Enabled**: Schedule is enforced automatically
-- ⏸️ **Paused**: Schedule temporarily disabled, manual audio control restored
+- **Enabled**: Schedule is enforced automatically
+- **Paused**: Schedule temporarily disabled, manual audio control restored
 - Works system-wide, even when other apps are focused
 
 Perfect for when you need to deviate from your schedule temporarily!
 
-## 🎯 System Tray Icon
+## System Tray Icon
 
 When running with `--tray` flag, a visual indicator appears in your taskbar:
 
-- 🟢 **Green Icon**: Auto-mute is ENABLED (schedule is active)
-- 🔴 **Red Icon**: Auto-mute is PAUSED (schedule is disabled)
+- **Green Icon**: Auto-mute is ENABLED (schedule is active)
+- **Red Icon**: Auto-mute is PAUSED (schedule is disabled)
 
 **Right-click the icon for options:**
 - Toggle Auto-Mute (enable/pause)
@@ -172,7 +172,7 @@ When running with `--tray` flag, a visual indicator appears in your taskbar:
 
 The icon updates automatically when you use the hotkey or when the schedule changes the mute state.
 
-## 📜 Available Scripts
+## Available Scripts
 
 | Script | Description |
 |--------|-------------|
@@ -190,7 +190,7 @@ The icon updates automatically when you use the hotkey or when the schedule chan
 | `check_status.ps1` | Check if script is running |
 | `watchdog.log` | Log file for watchdog activity and debugging |
 
-## 🛠️ How It Works
+## How It Works
 
 ### Main Application Flow
 1. Script checks current time every minute
@@ -208,14 +208,14 @@ The icon updates automatically when you use the hotkey or when the schedule chan
 - **Sleep/Wake Handling**: Detects when system wakes from sleep and restarts the process to ensure continued functionality
 - **Logging**: All watchdog activity is logged to `watchdog.log` for troubleshooting
 
-## 🎯 Use Cases
+## Use Cases
 
-- 🌙 **Quiet hours**: Prevent accidental audio during sleep hours
-- 💼 **Work schedule**: Auto-mute during meetings or focus time
-- 🏠 **Shared spaces**: Respect quiet hours in shared living spaces
-- 🎮 **Gaming schedule**: Different schedules for weekdays vs weekends
+- **Quiet hours**: Prevent accidental audio during sleep hours
+- **Work schedule**: Auto-mute during meetings or focus time
+- **Shared spaces**: Respect quiet hours in shared living spaces
+- **Gaming schedule**: Different schedules for weekdays vs weekends
 
-## 📦 Dependencies
+## Dependencies
 
 - `pycaw` - Windows audio control
 - `comtypes` - COM interface support
@@ -234,7 +234,7 @@ pip install pystray Pillow
 .\install_tray_dependencies.ps1
 ```
 
-## 🔧 Troubleshooting
+## Troubleshooting
 
 **Script not starting with watchdog?**
 - Verify virtual environment path is correct: `C:\Auto-Mute\.venv\Scripts\pythonw.exe`
@@ -270,7 +270,7 @@ pip install pystray Pillow
 - Verify Python is installed and in PATH: `python --version`
 - Or use full path to Python: `C:\Auto-Mute\.venv\Scripts\python.exe auto_mute.py`
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
@@ -280,18 +280,18 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
-## 📝 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - [pycaw](https://github.com/AndreMiras/pycaw) - Windows audio control library
 - [plyer](https://github.com/kivy/plyer) - Cross-platform notification support
 - [schedule](https://github.com/dbader/schedule) - Job scheduling library
 - [keyboard](https://github.com/boppreh/keyboard) - Global hotkey support
 
-## 📧 Contact
+## Contact
 
 Andru Tjalas - [@AndruTjalas1](https://github.com/AndruTjalas1)
 
@@ -299,4 +299,4 @@ Project Link: [https://github.com/AndruTjalas1/Auto-Mute](https://github.com/And
 
 ---
 
-⭐ If you find this project useful, please consider giving it a star!
+If you find this project useful, please consider giving it a star!
